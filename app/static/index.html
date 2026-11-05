@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resume ATS checker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#edf1f5; --panel:#ffffff; --ink:#0f1b2d; --muted:#5b6778; --line:#d5dde6;
+  --accent:#2f4bff; --good:#1e7b4e; --warn:#b77a12; --bad:#c23b32;
+  --good-bg:#e5f4ec; --warn-bg:#fbf0dc; --bad-bg:#fbe7e5;
+  --head:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --body:"Figtree","Segoe UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0d1420;--panel:#152033;--ink:#e8eef7;--muted:#9aa8bb;--line:#26344b;
+  --accent:#7d90ff;--good:#52c58a;--warn:#e3b04f;--bad:#f0807a;
+  --good-bg:#143326;--warn-bg:#3a2d12;--bad-bg:#3b1b1a;}
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--body);padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+.wrap{max-width:960px;margin:0 auto;padding:40px 20px 80px}
+h1{font:700 clamp(2rem,5vw,3.2rem)/1.05 var(--head);margin:0 0 12px;letter-spacing:-.02em}
+h2,h3{font-family:var(--head);margin:0}
+.lead{color:var(--muted);max-width:56ch;margin:0 0 32px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px}
+#drop{border:2px dashed var(--line);border-radius:12px;padding:36px 20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+#drop:hover,#drop.over,#drop:focus-visible{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,transparent);outline:none}
+#drop strong{display:block;font:600 1.15rem var(--head);margin-bottom:4px}
+#drop span{color:var(--muted);font-size:.92rem}
+#fileName{margin-top:10px;font-weight:600;color:var(--accent);word-break:break-all}
+label.jd{display:block;margin:20px 0 6px;font-weight:600}
+textarea{width:100%;min-height:110px;resize:vertical;border:1px solid var(--line);border-radius:10px;padding:12px;font:inherit;background:transparent;color:var(--ink)}
+textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+.hint{color:var(--muted);font-size:.88rem;margin-top:4px}
+button.go{margin-top:20px;background:var(--accent);color:#fff;border:0;border-radius:10px;padding:13px 26px;font:600 1rem var(--body);cursor:pointer}
+button.go:disabled{opacity:.5;cursor:not-allowed}
+button.go:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.err{margin-top:16px;padding:12px 14px;border-radius:10px;background:var(--bad-bg);color:var(--bad);font-weight:500}
+#results{margin-top:40px}
+.hero{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center}
+@media(max-width:640px){.hero{grid-template-columns:1fr;justify-items:center;text-align:center}}
+.ring{position:relative;width:180px;height:180px}
+.ring svg{transform:rotate(-90deg)}
+.ring .num{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.ring .num b{font:700 3.2rem/1 var(--head)}
+.ring .num small{color:var(--muted)}
+.grade{display:inline-block;padding:3px 12px;border-radius:99px;font-weight:600;font-size:.9rem;margin-bottom:8px}
+.sec{margin-top:16px}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:8px}
+.sec-head h3{font-size:1.2rem}
+.marks{font:700 1.2rem var(--head);white-space:nowrap}
+.marks small{color:var(--muted);font-weight:600}
+.bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin-bottom:14px}
+.bar i{display:block;height:100%;border-radius:99px}
+ul.list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.item{border-radius:10px;padding:10px 12px;font-size:.95rem}
+.item b{display:block}
+.item span{color:var(--muted)}
+.item.high{background:var(--bad-bg);border-left:4px solid var(--bad)}
+.item.medium{background:var(--warn-bg);border-left:4px solid var(--warn)}
+.item.low{background:var(--bg);border-left:4px solid var(--muted)}
+.item.pass{background:var(--good-bg);border-left:4px solid var(--good);padding:6px 12px}
+details{margin-top:10px}
+summary{cursor:pointer;color:var(--muted);font-weight:600;font-size:.92rem}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{padding:3px 10px;border-radius:99px;font-size:.85rem;font-weight:500}
+.chip.m{background:var(--good-bg);color:var(--good)}
+.chip.x{background:var(--bad-bg);color:var(--bad)}
+.stats{color:var(--muted);font-size:.9rem;margin-top:12px}
+.hidden{display:none}
+@media (prefers-reduced-motion:no-preference){.bar i,.ring circle.val{transition:all .9s cubic-bezier(.2,.7,.2,1)}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>Check how an ATS reads your resume</h1>
+  <p class="lead">Upload your resume to get a score out of 100, marks for each section, and a list of what to fix first.</p>
+
+  <section class="card">
+    <div id="drop" tabindex="0" role="button" aria-label="Choose a resume file">
+      <strong>Drop your resume here or click to browse</strong>
+      <span>PDF, DOCX or TXT, up to 5 MB</span>
+      <div id="fileName"></div>
+      <input id="file" type="file" accept=".pdf,.docx,.txt" hidden>
+    </div>
+    <label class="jd" for="jd">Job description (optional)</label>
+    <textarea id="jd" placeholder="Paste the job posting to see which keywords your resume is missing."></textarea>
+    <div class="hint">Without a job description, keyword marks are capped at 12 of 15.</div>
+    <button class="go" id="go" disabled>Check my resume</button>
+    <div id="error" class="err hidden" role="alert"></div>
+  </section>
+
+  <section id="results" class="hidden" aria-live="polite"></section>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const drop = $("#drop"), input = $("#file"), go = $("#go");
+let file = null;
+
+function setFile(f){
+  if(!f) return;
+  file = f; $("#fileName").textContent = f.name; go.disabled = false; hideError();
+}
+function showError(m){ const e=$("#error"); e.textContent=m; e.classList.remove("hidden"); }
+function hideError(){ $("#error").classList.add("hidden"); }
+
+drop.addEventListener("click", () => input.click());
+drop.addEventListener("keydown", e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); input.click(); }});
+input.addEventListener("change", () => setFile(input.files[0]));
+["dragenter","dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => setFile(e.dataTransfer.files[0]));
+
+go.addEventListener("click", async () => {
+  hideError(); go.disabled = true; go.textContent = "Checking…";
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("job_description", $("#jd").value);
+  try{
+    const r = await fetch("/api/analyze", {method:"POST", body:fd});
+    const data = await r.json();
+    if(!r.ok) throw new Error(data.detail || "Something went wrong.");
+    render(data);
+  }catch(err){ showError(err.message); }
+  finally{ go.disabled = false; go.textContent = "Check my resume"; }
+});
+
+const tone = p => p >= 75 ? "good" : p >= 50 ? "warn" : "bad";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function render(d){
+  const R = 80, C = 2*Math.PI*R, t = tone(d.overall_score);
+  const sections = d.sections.map(s => {
+    const tn = tone(s.percent);
+    const issues = s.issues.map(i =>
+      `<li class="item ${i.severity}"><b>${esc(i.message)}</b><span>${esc(i.fix)}</span></li>`).join("");
+    const passed = s.passed.length ? `<details><summary>${s.passed.length} checks passed</summary>
+      <ul class="list" style="margin-top:8px">${s.passed.map(p=>`<li class="item pass">${esc(p)}</li>`).join("")}</ul></details>` : "";
+    return `<article class="card sec">
+      <div class="sec-head"><h3>${esc(s.name)}</h3><div class="marks" style="color:var(--${tn})">${s.score}<small> / ${s.max}</small></div></div>
+      <div class="bar"><i style="width:${s.percent}%;background:var(--${tn})"></i></div>
+      ${issues ? `<ul class="list">${issues}</ul>` : `<div class="item pass"><b>No issues found in this section.</b></div>`}
+      ${passed}
+    </article>`;
+  }).join("");
+
+  const top = d.top_fixes.length ? `<article class="card sec"><h3 style="margin-bottom:12px">Fix these first</h3><ul class="list">
+    ${d.top_fixes.map(i=>`<li class="item ${i.severity}"><b>${esc(i.section)}: ${esc(i.message)}</b><span>${esc(i.fix)}</span></li>`).join("")}</ul></article>` : "";
+
+  const kw = d.keywords || {matched:[],missing:[]};
+  const kwBlock = (kw.matched.length || kw.missing.length) ? `<article class="card sec"><h3>Keywords</h3>
+    ${kw.missing.length ? `<div class="hint" style="margin-top:10px">Missing from your resume</div><div class="chips">${kw.missing.map(k=>`<span class="chip x">${esc(k)}</span>`).join("")}</div>`:""}
+    ${kw.matched.length ? `<div class="hint" style="margin-top:12px">Found in your resume</div><div class="chips">${kw.matched.map(k=>`<span class="chip m">${esc(k)}</span>`).join("")}</div>`:""}
+  </article>` : "";
+
+  const res = $("#results");
+  res.innerHTML = `
+    <article class="card hero">
+      <div class="ring">
+        <svg width="180" height="180" viewBox="0 0 180 180" aria-hidden="true">
+          <circle cx="90" cy="90" r="${R}" fill="none" stroke="var(--line)" stroke-width="14"/>
+          <circle class="val" cx="90" cy="90" r="${R}" fill="none" stroke="var(--${t})" stroke-width="14"
+            stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C}" data-target="${C*(1-d.overall_score/100)}"/>
+        </svg>
+        <div class="num"><b>${d.overall_score}</b><small>out of 100</small></div>
+      </div>
+      <div>
+        <span class="grade" style="background:var(--${t}-bg);color:var(--${t})">${esc(d.grade)}</span>
+        <h2 style="font-size:1.5rem;margin-bottom:6px">${esc(d.summary)}</h2>
+        <div class="stats">${d.stats.words} words · ${d.stats.pages} page(s)${d.stats.issue_count!=null?` · ${d.stats.issue_count} issues found`:""}</div>
+      </div>
+    </article>
+    ${top}${sections}${kwBlock}`;
+  res.classList.remove("hidden");
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const c = res.querySelector("circle.val");
+    if(c) c.setAttribute("stroke-dashoffset", c.dataset.target);
+  }));
+  res.scrollIntoView({behavior:"smooth", block:"start"});
+}
+</script>
+</body>
+</html>
